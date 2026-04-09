@@ -248,7 +248,7 @@
       box-shadow:0 10px 24px rgba(54,110,187,.24);
     }
 
-    .empty,.debug{
+    .empty{
       background:#fff;
       border:1px solid #e3edf7;
       border-radius:22px;
@@ -256,18 +256,6 @@
       text-align:center;
       color:var(--muted);
       box-shadow:var(--shadow);
-    }
-
-    .debug{
-      text-align:left;
-      margin-bottom:14px;
-      display:none;
-      white-space:pre-wrap;
-      font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-      font-size:13px;
-      color:#8a2b2b;
-      background:#fff8f8;
-      border-color:#f0c9c9;
     }
 
     .footer-note{
@@ -309,11 +297,9 @@
       <div class="eyebrow">Nouveautés UniPop</div>
       <h1>Nouveaux cours des 3 prochains mois</h1>
       <p>
-        Découvrez ici automatiquement les cours récemment mis en ligne. Cliquez sur un cours pour accéder directement à sa page et à l’inscription.
+        Découvrez ici automatiquement les cours à venir. Cliquez sur un cours pour accéder directement à sa page et à l’inscription.
       </p>
     </section>
-
-    <div id="debug" class="debug"></div>
 
     <section class="toolbar">
       <div class="search-wrap">
@@ -321,7 +307,7 @@
       </div>
       <div class="stats">
         <div class="pill" id="countPill">0 cours</div>
-        <div class="pill">Période: 90 jours</div>
+        <div class="pill">À venir: 3 mois</div>
       </div>
     </section>
 
@@ -331,13 +317,6 @@
 
   <script>
     const DATA_URL = "https://letzbug.github.io/franks_magic/data/trainings.json";
-    const DAYS_BACK = 90;
-
-    function showDebug(message){
-      const box = document.getElementById("debug");
-      box.style.display = "block";
-      box.textContent = message;
-    }
 
     function parseFRDate(dateStr){
       if(!dateStr || typeof dateStr !== "string") return null;
@@ -404,12 +383,19 @@
       return item?.onlineRegistrationUrl || item?.url || "#";
     }
 
-    function isRecent(date){
+    function isUniPop(item){
+      return item?.organisateur?.code === "UNIPOP";
+    }
+
+    function isInNextThreeMonths(date){
       if(!date) return false;
+
       const today = new Date();
-      const limit = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      limit.setDate(limit.getDate() - DAYS_BACK);
-      return date >= limit;
+      const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const end = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      end.setMonth(end.getMonth() + 3);
+
+      return date >= start && date <= end;
     }
 
     function sortByDateAsc(items){
@@ -427,7 +413,7 @@
       countPill.textContent = `${items.length} cours`;
 
       if(!items.length){
-        list.innerHTML = `<div class="empty">Aucun nouveau cours trouvé pour les 3 derniers mois.</div>`;
+        list.innerHTML = `<div class="empty">Aucun cours UniPop trouvé pour les 3 prochains mois.</div>`;
         return;
       }
 
@@ -468,37 +454,24 @@
       list.innerHTML = `<div class="empty">Chargement des cours…</div>`;
 
       try{
-        const url = `${DATA_URL}?v=${Date.now()}`;
-        const res = await fetch(url, { cache: "no-store" });
-
-        if(!res.ok){
-          throw new Error(`HTTP ${res.status} sur ${url}`);
-        }
+        const res = await fetch(`${DATA_URL}?v=${Date.now()}`, { cache: "no-store" });
+        if(!res.ok) throw new Error(`HTTP ${res.status}`);
 
         const items = await res.json();
-
-        if(!Array.isArray(items)){
-          throw new Error("Le JSON chargé n'est pas un tableau.");
-        }
+        if(!Array.isArray(items)) throw new Error("Le JSON chargé n'est pas un tableau.");
 
         const filtered = sortByDateAsc(
-  items.filter(item => {
-    const d = parseFRDate(getStartDate(item));
-    const link = getLink(item);
-
-    // NUR UNIPOP
-    const isUniPop = item?.organisateur?.code === "UNIPOP";
-
-    return d && isRecent(d) && link && link !== "#" && isUniPop;
-  })
-
+          items.filter(item => {
+            const d = parseFRDate(getStartDate(item));
+            const link = getLink(item);
+            return d && isInNextThreeMonths(d) && link && link !== "#" && isUniPop(item);
+          })
         );
 
         window.__allCourses = filtered;
         render(filtered);
       }catch(err){
         list.innerHTML = `<div class="empty">Impossible de charger les cours pour le moment.</div>`;
-        showDebug(`Erreur de chargement JSON:\n${err.message}\n\nURL testée:\n${DATA_URL}`);
         console.error(err);
       }
     }
