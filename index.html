@@ -191,6 +191,20 @@
       white-space:nowrap;
     }
 
+    .badge-places{
+      display:inline-flex;
+      align-items:center;
+      height:28px;
+      padding:0 10px;
+      border-radius:999px;
+      background:#f6f9fc;
+      color:#4b647f;
+      font-size:.78rem;
+      font-weight:800;
+      border:1px solid #dde8f3;
+      white-space:nowrap;
+    }
+
     .meta-line{
       display:flex;
       flex-wrap:wrap;
@@ -294,7 +308,7 @@
 <body>
   <div class="page">
     <section class="hero">
-      <div class="eyebrow">Nouveautés UniPop</div>
+      <div class="eyebrow">✨ Nouveautés UniPop</div>
       <h1>Nouveaux cours des 3 prochains mois</h1>
       <p>
         Découvrez ici automatiquement les cours à venir. Cliquez sur un cours pour accéder directement à sa page et à l’inscription.
@@ -398,6 +412,43 @@
       return date >= start && date <= end;
     }
 
+    function getInscrits(item){
+      const value =
+        item?.nbInscrits ??
+        item?.inscrits ??
+        item?.participantsInscrits ??
+        item?.registeredCount ??
+        0;
+
+      const num = Number(value);
+      return Number.isFinite(num) ? num : 0;
+    }
+
+    function getMaxPlaces(item){
+      const value =
+        item?.nbPlaces ??
+        item?.nbPlacesMax ??
+        item?.nombrePlaces ??
+        item?.maxParticipants ??
+        item?.capaciteMax ??
+        item?.capacity ??
+        null;
+
+      const num = Number(value);
+      return Number.isFinite(num) ? num : null;
+    }
+function getPlacesText(item){
+  const inscrits = getInscrits(item);
+  const max = getMaxPlaces(item);
+
+  if (max !== null && max > 0) {
+    return `${inscrits}/${max} inscrits`;
+  }
+
+  return `${inscrits} inscrits`;
+}
+    }
+
     function sortByDateAsc(items){
       return items.sort((a,b) => {
         const da = parseFRDate(getStartDate(a))?.getTime() ?? 0;
@@ -425,6 +476,7 @@
         const trainer = escapeHtml(getTrainer(item));
         const code = escapeHtml(getCode(item));
         const link = escapeHtml(getLink(item));
+        const placesText = escapeHtml(getPlacesText(item));
 
         return `
           <a class="card" href="${link}" target="_blank" rel="noopener">
@@ -434,6 +486,7 @@
               <div class="course-title">
                 <span class="title">${title}</span>
                 <span class="badge">Nouveau</span>
+                <span class="badge-places">${placesText}</span>
               </div>
               <div class="meta-line">
                 ${code ? `<span class="code-chip">${code}</span>` : ``}
@@ -493,7 +546,8 @@
             getPlace(item),
             getTrainer(item),
             getCode(item),
-            getStartDate(item)
+            getStartDate(item),
+            getPlacesText(item)
           ].join(" ").toLowerCase();
 
           return text.includes(q);
