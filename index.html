@@ -482,11 +482,16 @@
         }
 
         const filtered = sortByDateAsc(
-          items.filter(item => {
-            const d = parseFRDate(getStartDate(item));
-            const link = getLink(item);
-            return d && isRecent(d) && link && link !== "#";
-          })
+  items.filter(item => {
+    const d = parseFRDate(getStartDate(item));
+    const link = getLink(item);
+
+    // NUR UNIPOP
+    const isUniPop = item?.organisateur?.code === "UNIPOP";
+
+    return d && isRecent(d) && link && link !== "#" && isUniPop;
+  })
+
         );
 
         window.__allCourses = filtered;
